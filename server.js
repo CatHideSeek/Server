@@ -10,7 +10,7 @@ var USER_COUNT = 0;
 
 var io = io.attach(8080);
 
-console.log('\n=============\n');
+console.log('\n======HideSeek=======\n');
 console.log("Server is On");
 console.log('Time :  ' + new Date());
 console.log('\n=============\n');
@@ -18,6 +18,7 @@ console.log('\n=============\n');
 var room = {
 	id: 0
 	, name: 'Test'
+	, countPlayers: 0
 	, readyPlayers: 0
 	, maxPlayers: 2
 	, userList: []
@@ -39,15 +40,12 @@ var user = {
 	, objectKind: 0
 };
 
-userList.push(user);
-
-
-
 io.on('connection', function (socket) {
 
 	//유저 접속 카운트 갱신 ++
 	UserConnect();
 
+	
 	//로그인
 	socket.on('login', function (data) {
 		console.log('[Login]' + new Date() + '\n\t' + socket.id + ' | ' + data.name);
@@ -70,7 +68,7 @@ io.on('connection', function (socket) {
 	socket.on('register', function (data) {
 		console.log('[Register]' + new Date() + '\n\t' + socket.id + ' | ' + data.name);
 
-		var u = {
+		var user = {
 			name: data.name
 			, socketID: socket.id
 			, isPlayer: false
@@ -83,7 +81,7 @@ io.on('connection', function (socket) {
 			, objectKind: 0
 		};
 
-		userList.push(u);
+		userList.push(user);
 
 		socket.leave(socket.room);
 		socket.join('lobby');
@@ -100,6 +98,8 @@ io.on('connection', function (socket) {
 		});
 	});
 
+
+	
 	//방 리스트
 	socket.on('roomList', function (data) {
 		//방 배열을 전송
@@ -109,7 +109,7 @@ io.on('connection', function (socket) {
 	});
 
 	//방 생성
-	socket.on('create', function (data) {
+	socket.on('roomCreate', function (data) {
 		//방 모델 생성
 		var makeRoom = {
 			id: GenerateRandomID(1, 10000)
@@ -125,7 +125,7 @@ io.on('connection', function (socket) {
 		roomList.push(makeRoom);
 
 		//로비에 방 정보 전송
-		io.sockets.in('lobby').emit('roomCreate', {
+		io.sockets.in('lobby').emit('lobbyCreate', {
 			room: makeRoom
 		});
 
@@ -136,7 +136,7 @@ io.on('connection', function (socket) {
 		socket.room = makeRoom.id + makeRoom.name;
 
 		//클라이언트 완료 보내기
-		socket.emit('enter', {
+		socket.emit('roomEnter', {
 			roomName: makeRoom.id + makeRoom.name
 			, isHost: true
 		});
@@ -145,15 +145,12 @@ io.on('connection', function (socket) {
 	});
 
 	//방 입장
-	socket.on('enter', function (data) {
+	socket.on('roomEnter', function(data) {		
 		//방을 검색
 		var findRoom = FindRoom(data.roomName);
 
 		//방이 없는 경우
 		if (findRoom == null) {
-			socket.emit('error', {
-				errorCode: 1
-			});
 			console.log("[Error] " + new Date() + '\n' + socket.id + '가 존재하지 않는 방을 요청');
 		} else {
 			//방이 플레이 중이지 않은 경우
@@ -166,11 +163,10 @@ io.on('connection', function (socket) {
 				socket.room = data.roomName;
 
 				//클라이언트 완료 보내기
-				socket.emit('enter', {
+				socket.emit('roomEnter', {
 					roomName: data.roomName
 					, isHost: false
 				});
-
 			} else {
 				//플레이 중인 경우
 				console.log('[JoinFail]' + findRoom.name + ' is Playing!');
@@ -180,18 +176,17 @@ io.on('connection', function (socket) {
 
 
 	//클라이언트의 방 접속 완료
-	socket.on('join', function (data) {
+	socket.on('roomJoin', function (data) {
 		//방을 검색
 		var findRoom = FindRoom(socket.room);
-
+		
 		//방이 없는 경우
 		if (findRoom == null) {
 			console.log("[Error] " + new Date() + '\n' + socket.id + '가 존재하지 않는 방을 요청');
 		} else {
 			//방이 있는 경우
-
 			//유저 모델 생성
-			var u = {
+			var user = {
 				name: data.name
 				, socketID: socket.id
 				, isPlayer: false
@@ -211,17 +206,15 @@ io.on('connection', function (socket) {
 			findRoom.countPlayers++;
 
 			//추가된 유저를 보냄
-			socket.broadcast.to(socket.room).emit('join', u);
+			io.sockets.in(socket.room).emit('roomJoin', user);
 
 			//
 			if (findRoom.userList != null) {
 				//현재 접속 유저에게 다른 유저들을 보냄
-				socket.emit('userList', {
-					userList: findRoom.userList
-				});
+				socket.emit('userList', findRoom.userList);
 
 				//로비에 방 정보 전송
-				io.sockets.in('lobby').emit('roomJoin', {
+				io.sockets.in('lobby').emit('lobbyJoin', {
 					roomName: socket.room
 					, count: findRoom.countPlayers
 				});
@@ -232,7 +225,7 @@ io.on('connection', function (socket) {
 
 
 	//클라이언트의 준비 완료
-	socket.on('ready', function (data) {
+	socket.on('roomReady', function (data) {
 		//방을 검색
 		var findRoom = FindRoom(socket.room);
 
@@ -242,9 +235,6 @@ io.on('connection', function (socket) {
 		} else {
 			if (findRoom.userList != null) {
 				//현재 접속 유저에게 다른 유저들을 보냄
-				socket.emit('userList', {
-					userList: findRoom.userList
-				});
 
 				var u = FindRoomInUser(findRoom, socket.id);
 
@@ -259,7 +249,7 @@ io.on('connection', function (socket) {
 
 					console.log('[RoomInfo-Ready] : total = ' + findRoom.userList.length + ' | ready =  ' + findRoom.readyPlayers + ' / req = ' + findRoom.maxPlayers);
 
-					io.sockets.in(socket.room).emit('ready', {
+					io.sockets.in(socket.room).emit('roomReady', {
 						socketID: u.socketID
 						, isReady: data.isReady
 						, readyPlayers: findRoom.readyPlayers
@@ -270,7 +260,7 @@ io.on('connection', function (socket) {
 	});
 
 	//클라이언트의 준비 완료
-	socket.on('start', function (data) {
+	socket.on('roomStart', function (data) {
 
 		var findRoom = FindRoom(socket.room);
 
@@ -281,12 +271,12 @@ io.on('connection', function (socket) {
 			findRoom.isPlay = true;
 
 			//방의 모든 유저 게임 시작.
-			io.sockets.in(socket.room).emit('start', {
+			io.sockets.in(socket.room).emit('roomStart', {
 				a: 0
 			});
 
 			//방 배열을 전송
-			socket.broadcast.to('lobby').emit('roomStart', {
+			socket.broadcast.to('lobby').emit('lobbyStart', {
 				roomName: socket.room
 				, isPlay: true
 			});
@@ -295,7 +285,7 @@ io.on('connection', function (socket) {
 
 
 	//게임방 아웃
-	socket.on('exit', function (data) {
+	socket.on('roomExit', function (data) {
 
 		var findRoom = FindRoom(socket.room);
 
@@ -320,12 +310,12 @@ io.on('connection', function (socket) {
 					, message: name + '님이  나갔어요.'
 				});
 
-				io.sockets.in(socket.room).emit('exit', {
+				io.sockets.in(socket.room).emit('roomExit', {
 					name: name
 				});
 
 				//로비에 방 정보 전송
-				io.sockets.in('lobby').emit('roomJoin', {
+				io.sockets.in('lobby').emit('lobbyJoin', {
 					roomName: socket.room
 					, count: findRoom.countPlayers
 				});
@@ -336,7 +326,7 @@ io.on('connection', function (socket) {
 						console.log("[RoomInfo-Remove] " + new Date() + '\n\tNo. ' + roomList[i].id + ' | ' + roomList[i].name);
 						roomList.splice(i, 1);
 						//로비에 방 정보 전송
-						io.sockets.in('lobby').emit('roomDelet', {
+						io.sockets.in('lobby').emit('lobbyDelet', {
 							roomName: socket.room
 						});
 						break;
@@ -348,7 +338,7 @@ io.on('connection', function (socket) {
 			socket.join('lobby');
 			socket.room = 'lobby';
 
-			socket.emit('out', {
+			socket.emit('roomOut', {
 				a: 1
 			});
 		}
@@ -390,17 +380,17 @@ io.on('connection', function (socket) {
 	});
 
 	//포탈 생성
-	socket.on('portal',function(data){
+	socket.on('portalCreate', function (data) {
 		io.sockets.in(socket.room).emit('portal', data);
 	});
-	
+
 	//포탈 열림
-	socket.on('open', function (data) {
+	socket.on('portalOpen', function (data) {
 		io.sockets.in(socket.room).emit('open', data);
 	});
 
 	//포탈 닫힘
-	socket.on('close', function (data) {
+	socket.on('portalClose', function (data) {
 		io.sockets.in(socket.room).emit('close', data);
 	});
 
@@ -435,12 +425,12 @@ io.on('connection', function (socket) {
 					, message: name + '님이  나갔어요.'
 				});
 
-				io.sockets.in(socket.room).emit('exit', {
+				io.sockets.in(socket.room).emit('roomExit', {
 					name: name
 				});
 
 				//로비에 방 정보 전송
-				io.sockets.in('lobby').emit('roomJoin', {
+				io.sockets.in('lobby').emit('lobbyJoin', {
 					roomName: socket.room
 					, count: findRoom.userList.length
 				});
@@ -461,7 +451,7 @@ io.on('connection', function (socket) {
 			socket.leave(socket.room);
 			socket.join('lobby');
 			socket.room = 'lobby';
-			socket.emit('out', {
+			socket.emit('roomOut', {
 				a: 1
 			});
 
