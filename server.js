@@ -398,17 +398,18 @@ io.on('connection', function (socket) {
 
 	//포탈 생성
 	socket.on('portalCreate', function (data) {
-		io.sockets.in(socket.room).emit('portal', data);
+		io.sockets.in(socket.room).emit('portalCreate', data);
 	});
 
 	//포탈 열림
 	socket.on('portalOpen', function (data) {
-		io.sockets.in(socket.room).emit('open', data);
+        console.log("portal is open");
+		io.sockets.in(socket.room).emit('portalOpen', data);
 	});
 
 	//포탈 닫힘
 	socket.on('portalClose', function (data) {
-		io.sockets.in(socket.room).emit('close', data);
+		io.sockets.in(socket.room).emit('portalClose', data);
 	});
 
 	//채팅 입력 시 
