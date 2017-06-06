@@ -10,7 +10,7 @@ var USER_COUNT = 0;
 
 var io = io.attach(8080);
 
-console.log('\n======1.53ver=======\n');
+console.log('\n======1.6ver=======\n');
 console.log('\n======HideSeek=======\n');
 console.log("Server is On");
 console.log('Time :  ' + new Date());
@@ -364,6 +364,16 @@ io.on('connection', function (socket) {
         }
     });
 
+    //맵 정보
+    socket.on('map', function (data) {
+        socket.broadcast.to(socket.room).emit('map', data);
+    });
+    
+    //스폰 정보
+    socket.on('spawnPos', function (data) {
+        socket.broadcast.to(socket.room).emit('spawnPos', data);
+    });
+    
     //이동
     socket.on('move', function (data) {
         socket.broadcast.to(socket.room).emit('move', data);
