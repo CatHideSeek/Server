@@ -373,6 +373,20 @@ io.on('connection', function (socket) {
     socket.on('spawnPos', function (data) {
         socket.broadcast.to(socket.room).emit('spawnPos', data);
     });
+
+    //트랩
+    socket.on('trap', function (data) {
+        socket.broadcast.to(socket.room).emit('trap', data);
+    });
+
+    //맵생성기
+    socket.on('generator', function (data) {
+        socket.broadcast.to(socket.room).emit('generator', data);
+    });
+
+    socket.on('initEnd', function (data) {
+        socket.broadcast.to(socket.room).emit('initEnd', data);
+    });
     
     //이동
     socket.on('move', function (data) {
