@@ -384,10 +384,16 @@ io.on('connection', function (socket) {
         socket.broadcast.to(socket.room).emit('generator', data);
     });
 
+    //맵생성 완료 알림
     socket.on('initEnd', function (data) {
         socket.broadcast.to(socket.room).emit('initEnd', data);
     });
     
+    //고양이 모델 정보
+    socket.on('modelType', function (data) {
+        socket.broadcast.to(socket.room).emit('modelType', data);
+    });
+
     //이동
     socket.on('move', function (data) {
         socket.broadcast.to(socket.room).emit('move', data);
