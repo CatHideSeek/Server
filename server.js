@@ -10,7 +10,7 @@ var USER_COUNT = 0;
 
 var io = io.attach(8080);
 
-console.log('\n======1.6ver=======\n');
+console.log('\n======1.75ver=======\n');
 console.log('\n======HideSeek=======\n');
 console.log("Server is On");
 console.log('Time :  ' + new Date());
@@ -18,7 +18,19 @@ console.log('\n=============\n');
 
 var room = {
     id: 0,
+    name: 'Lobby',
+    pw: -1,
+    countPlayers: 0,
+    readyPlayers: 0,
+    maxPlayers: 100000,
+    userList: [],
+    isPlay: false
+};
+
+var roomTest = {
+    id: 0,
     name: 'Test',
+    pw: -1,
     countPlayers: 0,
     readyPlayers: 0,
     maxPlayers: 2,
@@ -27,6 +39,8 @@ var room = {
 };
 
 roomList.push(room);
+
+roomList.push(roomTest);
 
 var user = {
     name: "",
@@ -46,28 +60,40 @@ io.on('connection', function (socket) {
     //유저 접속 카운트 갱신 ++
     UserConnect();
 
+    //가입
+    socket.on('register', function (data) {
 
-    //로그인
-    socket.on('login', function (data) {
-        console.log('[Login]' + new Date() + '\n\t' + socket.id + ' | ' + data.name);
-        socket.leave(socket.room);
-        socket.join('lobby');
-        socket.room = 'lobby';
+        if (FindUserName(data.name)) {
 
-        //유저의 socket id를 갱신
-        socket.emit('login', {
-            socketID: socket.id
-        });
+            console.log('[Register]' + new Date() + '\n\t' + socket.id + ' | ' + data.name);
 
-        io.sockets.in(socket.room).emit('chat', {
-            name: "[Join]",
-            message: data.name + "님이 접속 하셨습니다."
-        });
+
+
+
+            socket.leave(socket.room);
+            socket.join(roomList[0].id + roomList[0].name);
+            socket.room = roomList[0].id + roomList[0].name;
+            console.log(socket.room);
+
+            //유저의 socket id를 갱신
+            socket.emit('register', {
+                name: data.name,
+                socketID: socket.id
+            });
+
+            socket.broadcast.to(socket.room).emit('chat', {
+                name: "[Join]",
+                message: data.name + "님이 접속 하셨습니다.",
+                where: 0
+            });
+        } else {
+            socket.emit('errorcode', {
+                code: 0
+            });
+        }
     });
 
-    //회원가입
-    socket.on('register', function (data) {
-        console.log('[Register]' + new Date() + '\n\t' + socket.id + ' | ' + data.name);
+    socket.on('lobbyEnter', function (data) {
 
         var user = {
             name: data.name,
@@ -82,23 +108,38 @@ io.on('connection', function (socket) {
             objectKind: 0
         };
 
-        userList.push(user);
 
-        socket.leave(socket.room);
-        socket.join('lobby');
-        socket.room = 'lobby';
 
-        //유저의 socket id를 갱신
-        socket.emit('login', {
-            socketID: socket.id
+        socket.emit('roomList', {
+            roomList: roomList
         });
 
-        io.sockets.in(socket.room).emit('chat', {
-            name: "[Join]",
-            message: data.name + "님이 접속 하셨습니다."
-        });
+
+
+        roomList[0].userList.push(user);
+
+        if (roomList[0].userList != null) {
+            //현재 접속 유저에게 다른 유저들을 보냄
+            socket.emit('lobbyEnter', {
+                userList: roomList[0].userList
+            });
+
+
+            //추가된 유저를 보냄
+            io.sockets.in(socket.room).emit('lobbyEnterUser', user);
+        }
     });
 
+
+    function FindUserName(name) {
+        for (var i = 0; i < userList.length; i++) {
+            if (userList[i].name == name)
+                return false;
+
+        }
+        return true;
+
+    }
 
 
     //방 리스트
@@ -115,6 +156,7 @@ io.on('connection', function (socket) {
         var makeRoom = {
             id: GenerateRandomID(1, 10000),
             name: data.roomName,
+            pw: data.pw,
             countPlayers: 0,
             readyPlayers: 0,
             maxPlayers: data.maxPlayers,
@@ -125,16 +167,18 @@ io.on('connection', function (socket) {
         //배열에 추가
         roomList.push(makeRoom);
 
+        console.log("name : " + socket.room);
+
         //로비에 방 정보 전송
         io.sockets.in('lobby').emit('lobbyCreate', {
             room: makeRoom
         });
 
-        socket.leave(socket.room);
+        //socket.leave(socket.room);
         //room 입장
-        socket.join(makeRoom.id + makeRoom.name);
+        //socket.join(makeRoom.id + makeRoom.name);
         //socket의 room 지정
-        socket.room = makeRoom.id + makeRoom.name;
+        //socket.room = makeRoom.id + makeRoom.name;
 
         //클라이언트 완료 보내기
         socket.emit('roomEnter', {
@@ -188,6 +232,9 @@ io.on('connection', function (socket) {
             console.log("[roomJoin-Error] " + new Date() + '\n' + socket.id + '가 존재하지 않는 방을 요청');
             console.log("[RoomList]" + roomList);
         } else {
+
+            console.log("[roomJoin] join is work");
+
             //방이 있는 경우
             //유저 모델 생성
             var user = {
@@ -368,7 +415,7 @@ io.on('connection', function (socket) {
     socket.on('map', function (data) {
         socket.broadcast.to(socket.room).emit('map', data);
     });
-    
+
     //스폰 정보
     socket.on('spawnPos', function (data) {
         socket.broadcast.to(socket.room).emit('spawnPos', data);
@@ -388,7 +435,7 @@ io.on('connection', function (socket) {
     socket.on('initEnd', function (data) {
         socket.broadcast.to(socket.room).emit('initEnd', data);
     });
-    
+
     //고양이 모델 정보
     socket.on('modelType', function (data) {
         socket.broadcast.to(socket.room).emit('modelType', data);
@@ -487,7 +534,7 @@ io.on('connection', function (socket) {
                 });
 
             } else {
-                if (socket.room != "0Test") {
+                if (findRoom.id != 0) {
                     for (var i = 0; i < roomList.length; i++) {
                         if (socket.room == roomList[i].id + roomList[i].name) {
                             console.log("[RoomInfo-Remove] " + new Date() + '\n\tNo. ' + roomList[i].id + ' | ' + roomList[i].name);
