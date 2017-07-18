@@ -10,7 +10,7 @@ var USER_COUNT = 0;
 
 var io = io.attach(8080);
 
-console.log('\n======2ver=======\n');
+console.log('\n======2.1ver=======\n');
 console.log('\n======HideSeek=======\n');
 console.log("Server is On");
 console.log('Time :  ' + new Date());
@@ -436,9 +436,6 @@ io.on('connection', function (socket) {
                 characterKind: data.characterKind,
                 objectKind: 0
             }
-
-            //유저 추가
-            findRoom.userList.push(user);
 
             ++findRoom.loadingPlayers;
 
