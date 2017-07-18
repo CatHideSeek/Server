@@ -10,7 +10,7 @@ var USER_COUNT = 0;
 
 var io = io.attach(8080);
 
-console.log('\n======2.3ver=======\n');
+console.log('\n======2.35ver=======\n');
 console.log('\n======HideSeek=======\n');
 console.log("Server is On");
 console.log('Time :  ' + new Date());
@@ -453,18 +453,13 @@ io.on('connection', function (socket) {
 				, characterKind: data.characterKind
 				, objectKind: 0
 			}
-
-			++findRoom.loadingPlayers;
-
 			console.log(user.isHost);
 
 
 			if (findRoom.userList != null) {
 				//추가된 유저를 보냄
 				io.sockets.in(socket.room).emit('roomJoin', user);
-				io.sockets.in(socket.room).emit('roomLoad', {
-					load: findRoom.loadingPlayers
-				});
+
 
 			}
 		}
@@ -622,7 +617,19 @@ io.on('connection', function (socket) {
 	socket.on('remap', function (data) {
 		socket.broadcast.to(socket.room).emit('remap', data);
 	});
-	
+
+	socket.on('loading', function (data) {
+		var findRoom = FindRoom(socket.room);
+
+		if (findRoom != null) {
+			++findRoom.loadingPlayers;
+			
+			io.sockets.in(socket.room).emit('roomLoad', {
+				load: findRoom.loadingPlayers
+			});
+		}
+	});
+
 	//스폰 정보
 	socket.on('spawnPos', function (data) {
 		socket.broadcast.to(socket.room).emit('spawnPos', data);
