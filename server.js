@@ -10,7 +10,7 @@ var USER_COUNT = 0;
 
 var io = io.attach(8080);
 
-console.log('\n======2.35ver=======\n');
+console.log('\n======2.351ver=======\n');
 console.log('\n======HideSeek=======\n');
 console.log("Server is On");
 console.log('Time :  ' + new Date());
@@ -780,6 +780,12 @@ io.on('connection', function (socket) {
 				a: 1
 			});
 		}
+		
+		var userIndex = FindName(name);
+		if(userIndex != -1){
+			userList.splice(userIndex, 1);
+		}
+		
 		//유저 접속 카운트 갱신 --
 		UserDisconnect();
 	});
@@ -819,6 +825,16 @@ function UserCountLog(date) {
 	console.log('[UserCount] ' + date + '\n현재 연결중인 유저수는 총 ' + USER_COUNT + " 명");
 	console.log('==========\n');
 }
+
+function FindNameIndex(name) {
+		for (var i = 0; i < userList.length; i++) {
+			if (userList[i].name == name)
+				return i
+
+		}
+		return -1;
+
+	}
 
 function FindRoom(name) {
 	if (roomList != null) {
