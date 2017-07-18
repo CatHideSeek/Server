@@ -10,7 +10,7 @@ var USER_COUNT = 0;
 
 var io = io.attach(8080);
 
-console.log('\n======2.2ver=======\n');
+console.log('\n======2.3ver=======\n');
 console.log('\n======HideSeek=======\n');
 console.log("Server is On");
 console.log('Time :  ' + new Date());
@@ -618,6 +618,11 @@ io.on('connection', function (socket) {
 		socket.broadcast.to(socket.room).emit('map', data);
 	});
 
+	//맵 정보
+	socket.on('remap', function (data) {
+		socket.broadcast.to(socket.room).emit('remap', data);
+	});
+	
 	//스폰 정보
 	socket.on('spawnPos', function (data) {
 		socket.broadcast.to(socket.room).emit('spawnPos', data);
