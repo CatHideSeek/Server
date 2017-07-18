@@ -443,11 +443,6 @@ io.on('connection', function (socket) {
 
 
             if (findRoom.userList != null) {
-                //현재 접속 유저에게 다른 유저들을 보냄
-                socket.emit('userList', {
-                    userList: findRoom.userList
-                });
-
                 //추가된 유저를 보냄
                 io.sockets.in(socket.room).emit('roomJoin', user);
                 io.sockets.in(socket.room).emit('roomLoad', {
