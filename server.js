@@ -8,11 +8,13 @@ var roomList = new Array();
 
 var USER_COUNT = 0;
 
-var io = io.attach(8000);
+var port = 8000;
+
+var io = io.attach(port);
 
 console.log('\n======2.353ver=======\n');
 console.log('\n======HideSeek=======\n');
-console.log("Server is On");
+console.log("Server is On | Port = "+port);
 console.log('Time :  ' + new Date());
 console.log('\n=============\n');
 
@@ -711,7 +713,12 @@ io.on('connection', function (socket) {
     socket.on('portalClose', function (data) {
         io.sockets.in(socket.room).emit('portalClose', data);
     });
-
+	
+    //포탈 탈출
+    socket.on('escape', function (data) {
+        io.sockets.in(socket.room).emit('escape', data);
+    });
+	
     //채팅 입력 시 
     socket.on('chat', function (data) {
         console.log('[Chat] ' + new Date() + ' : ' + data.name + ' >> ' + data.message);
